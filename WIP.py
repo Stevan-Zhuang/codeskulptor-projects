@@ -1,4 +1,4 @@
-# Some random terrible game
+# Unfinished
 
 import simplegui
 import math
