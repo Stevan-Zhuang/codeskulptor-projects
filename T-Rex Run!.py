@@ -1,4 +1,5 @@
 # A recreation of the google chrome dinosaur game in codeskulptor
+# By Stevan Zhuang
 
 import simplegui
 import random
