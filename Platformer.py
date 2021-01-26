@@ -1,6 +1,9 @@
-# Programming video game project
-# and clearly definitively decidedly the best game to ever exist
+# An old game made for the Programming 11 course at FPSS
 # by Stevan Zhuang
+
+# TODO:
+# Add ending so game doesn't crash on completion
+# Add python 3 compatibility
 
 import simplegui, random
 
