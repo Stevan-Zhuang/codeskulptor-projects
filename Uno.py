@@ -134,9 +134,14 @@ class Bot(Hand):
         # Chooses the colour with the most amount in hand
         colours = {'red': 0, 'blue': 0, 'green': 0, 'yellow': 0}
         for card in self.cards:
-            if colours.has_key(card.colour):
+            if card.colour in colours:
                 colours[card.colour] += 1
-        colour = colours.keys()[colours.values().index(max(colours.values()))]
+        colour = None
+        max_val = -1
+        for col in colours.keys():
+            if colours[col] > max_val:
+                max_val = colours[col]
+                colour = col
         game.held.colour = colour
         game.play_card()
            
