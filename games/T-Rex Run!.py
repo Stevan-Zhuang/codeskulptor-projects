@@ -235,7 +235,7 @@ class Game:
 
     def update(self):
         if self.has_started:
-            self.score += self.scroll_speed / 36
+            self.score += self.scroll_speed / 36.0
             self.scroll_pos -= self.scroll_speed
 
             if self.score > self.next_hundred:
