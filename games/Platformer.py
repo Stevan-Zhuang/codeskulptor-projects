@@ -1,11 +1,8 @@
 # An old game made for the Programming 11 course at FPSS
 # by Stevan Zhuang
 
-# TODO:
-# Add ending so game doesn't crash on completion
-# Add python 3 compatibility
-
 import simplegui, random
+from time import time
 
 DIMENSIONS = [760, 600]
 SCALE = 40
@@ -112,7 +109,7 @@ class Obstacle(Object):
         # Checks collision against player and all entities
         for axis in range(2):
             if self.will_collide(player, axis): self.collision(player, axis)
-            for ent in Game.room(0,0).ents:
+            for ent in game.room(0,0).ents:
                 if self.will_collide(ent, axis): self.collision(ent, axis)
         
     def stop(self, ent, axis):
@@ -171,9 +168,9 @@ class Entity(Object, Animation):
         
     def velocity_update(self):
         if not self.ground:
-            if self.a_vel[1] + Game.GRAVITY > Game.GRAVITY_MAX:
-                self.a_vel[1] = Game.GRAVITY_MAX
-            else: self.a_vel[1] += Game.GRAVITY
+            if self.a_vel[1] + game.GRAVITY > game.GRAVITY_MAX:
+                self.a_vel[1] = game.GRAVITY_MAX
+            else: self.a_vel[1] += game.GRAVITY
         for axis in range(2):
             self.vel[axis] = self.d_vel[axis] + self.a_vel[axis]
         if self.ground and not self.ground.will_collide(self, 1):
@@ -207,10 +204,10 @@ class Entity(Object, Animation):
             self.hp -= thing.dmg
             if self.hp <= 0 and self.active: # Death
                 self.active = False
-                self.time = Game.DEATH_TIME
+                self.time = game.DEATH_TIME
                 self.image = self.DEATH
                 self.reset_animation()
-            else: self.i_time = Game.INVIN_TIME
+            else: self.i_time = game.INVIN_TIME
             
 class Character(Entity):
     
@@ -253,40 +250,40 @@ class Character(Entity):
     def key_down(self, key):
         if key == simplegui.KEY_MAP['right']: # Move right / Aim dash right
             self.h_right = True
-            self.d_vel[0] += Game.WALK_VEL
+            self.d_vel[0] += game.WALK_VEL
             if not self.h_left: self.face = 'right'
         if key == simplegui.KEY_MAP['left']: # Move left / Aim dash left
             self.h_left = True
-            self.d_vel[0] -= Game.WALK_VEL
+            self.d_vel[0] -= game.WALK_VEL
             if not self.h_right: self.face = 'left'
                 
         if key == simplegui.KEY_MAP['e']: # Dash
-            if self.time <= Game.MOVE_USAGE and self.dash:
+            if self.time <= game.MOVE_USAGE and self.dash:
                 if self.h_right and not self.h_left:
                     self.dash = False
-                    self.time = Game.DASH_COOLDOWN
-                    self.i_time = Game.DASH_INVIN
+                    self.time = game.DASH_COOLDOWN
+                    self.i_time = game.DASH_INVIN
                     self.reset_animation()
                     if self.ground:
-                        self.a_vel[0] = Game.DASH_ACCEL[0]
+                        self.a_vel[0] = game.DASH_ACCEL[0]
                         self.image = self.ROLL_RIGHT
                     else:
-                        self.a_vel = [Game.DASH_ACCEL[0], Game.DASH_ACCEL[1]]
+                        self.a_vel = [game.DASH_ACCEL[0], game.DASH_ACCEL[1]]
                         self.image = self.LUNGE_RIGHT
                 elif self.h_left and not self.h_right:
                     self.dash = False
-                    self.time = Game.DASH_COOLDOWN
-                    self.i_time = Game.DASH_INVIN
+                    self.time = game.DASH_COOLDOWN
+                    self.i_time = game.DASH_INVIN
                     self.reset_animation()
                     if self.ground:
-                        self.a_vel[0] = -Game.DASH_ACCEL[0]
+                        self.a_vel[0] = -game.DASH_ACCEL[0]
                         self.image = self.ROLL_LEFT
                     else:
-                        self.a_vel = [-Game.DASH_ACCEL[0], Game.DASH_ACCEL[1]]
+                        self.a_vel = [-game.DASH_ACCEL[0], game.DASH_ACCEL[1]]
                         self.image = self.LUNGE_LEFT
                         
         if key == simplegui.KEY_MAP['f']: # Attack
-            if self.time <= Game.MOVE_USAGE and self.weapon.time <= Game.MOVE_USAGE:
+            if self.time <= game.MOVE_USAGE and self.weapon.time <= game.MOVE_USAGE:
                 self.a_vel[0] = 0
                 self.weapon.reset_animation()
                 self.weapon.active = True
@@ -296,65 +293,65 @@ class Character(Entity):
                 elif self.face == 'left':
                     self.weapon.image = self.weapon.LEFT
                     self.weapon.set_pos(-60)
-                self.weapon.time = Game.ATTACK_DURATION
+                self.weapon.time = game.ATTACK_DURATION
 
         if key == simplegui.KEY_MAP['space']: # Jump
-            if self.ground and self.time <= Game.MOVE_USAGE:
-                self.a_vel[1] = Game.JUMP_ACCEL - abs(self.a_vel[0]/2)
-                self.time = Game.JUMP_COOLDOWN
+            if self.ground and self.time <= game.MOVE_USAGE:
+                self.a_vel[1] = game.JUMP_ACCEL - abs(self.a_vel[0]/2)
+                self.time = game.JUMP_COOLDOWN
                 
     def key_up(self,key):
         if key == simplegui.KEY_MAP['right']: # Stop moving right
-            self.d_vel[0] -= Game.WALK_VEL
+            self.d_vel[0] -= game.WALK_VEL
             if self.h_left: self.face = 'left'
             self.h_right = False
                 
         if key == simplegui.KEY_MAP['left']: # Stop moving left
-            self.d_vel[0] += Game.WALK_VEL
+            self.d_vel[0] += game.WALK_VEL
             if self.h_right: self.face = 'right'
             self.h_left = False
             
     def check_velocity(self):
         if self.active:
             # Deacceleration when past max speed
-            if self.a_vel[0] > Game.WALK_ACCEL_MAX:
-                if self.a_vel[0] - Game.DEACCEL_MAX < Game.WALK_ACCEL_MAX:
-                    self.a_vel[0] = Game.WALK_ACCEL_MAX
-                else: self.a_vel[0] -= Game.DEACCEL_MAX
-            elif self.a_vel[0] < -Game.WALK_ACCEL_MAX:
-                if self.a_vel[0] + Game.DEACCEL_MAX > -Game.WALK_ACCEL_MAX:
-                    self.a_vel[0] = -Game.WALK_ACCEL_MAX
-                else: self.a_vel[0] += Game.DEACCEL_MAX
+            if self.a_vel[0] > game.WALK_ACCEL_MAX:
+                if self.a_vel[0] - game.DEACCEL_MAX < game.WALK_ACCEL_MAX:
+                    self.a_vel[0] = game.WALK_ACCEL_MAX
+                else: self.a_vel[0] -= game.DEACCEL_MAX
+            elif self.a_vel[0] < -game.WALK_ACCEL_MAX:
+                if self.a_vel[0] + game.DEACCEL_MAX > -game.WALK_ACCEL_MAX:
+                    self.a_vel[0] = -game.WALK_ACCEL_MAX
+                else: self.a_vel[0] += game.DEACCEL_MAX
             # Going both directions deacceleration
             if self.h_right and self.h_left:
-                if self.a_vel[0] > Game.WALK_DEACCEL_MAX:
-                    if self.a_vel[0] - Game.WALK_DEACCEL < Game.WALK_DEACCEL_MAX:
-                        self.a_vel[0] = Game.WALK_DEACCEL_MAX
-                    else: self.a_vel[0] -= Game.WALK_DEACCEL
-                if self.a_vel[0] < Game.WALK_DEACCEL_MAX:
-                    if self.a_vel[0] + Game.WALK_DEACCEL > Game.WALK_DEACCEL_MAX:
-                        self.a_vel[0] = Game.WALK_DEACCEL_MAX
-                    else: self.a_vel[0] += Game.WALK_DEACCEL
+                if self.a_vel[0] > game.WALK_DEACCEL_MAX:
+                    if self.a_vel[0] - game.WALK_DEACCEL < game.WALK_DEACCEL_MAX:
+                        self.a_vel[0] = game.WALK_DEACCEL_MAX
+                    else: self.a_vel[0] -= game.WALK_DEACCEL
+                if self.a_vel[0] < game.WALK_DEACCEL_MAX:
+                    if self.a_vel[0] + game.WALK_DEACCEL > game.WALK_DEACCEL_MAX:
+                        self.a_vel[0] = game.WALK_DEACCEL_MAX
+                    else: self.a_vel[0] += game.WALK_DEACCEL
             # Hold right acceleration
-            if self.h_right and self.a_vel[0] <= Game.WALK_ACCEL_MAX:
-                if self.a_vel[0] + Game.WALK_ACCEL > Game.WALK_ACCEL_MAX:
-                    self.a_vel[0] = Game.WALK_ACCEL_MAX
-                else: self.a_vel[0] += Game.WALK_ACCEL
+            if self.h_right and self.a_vel[0] <= game.WALK_ACCEL_MAX:
+                if self.a_vel[0] + game.WALK_ACCEL > game.WALK_ACCEL_MAX:
+                    self.a_vel[0] = game.WALK_ACCEL_MAX
+                else: self.a_vel[0] += game.WALK_ACCEL
             # Release right deacceleration
-            elif self.a_vel[0] > Game.WALK_DEACCEL_MAX:
-                if self.a_vel[0] - Game.WALK_DEACCEL < Game.WALK_DEACCEL_MAX:
-                    self.a_vel[0] = Game.WALK_DEACCEL_MAX
-                else: self.a_vel[0] -= Game.WALK_DEACCEL
+            elif self.a_vel[0] > game.WALK_DEACCEL_MAX:
+                if self.a_vel[0] - game.WALK_DEACCEL < game.WALK_DEACCEL_MAX:
+                    self.a_vel[0] = game.WALK_DEACCEL_MAX
+                else: self.a_vel[0] -= game.WALK_DEACCEL
             # Hold left acceleration
-            if self.h_left and self.a_vel[0] >= -Game.WALK_ACCEL_MAX:
-                if self.a_vel[0] - Game.WALK_ACCEL < -Game.WALK_ACCEL_MAX: 
-                    self.a_vel[0] = -Game.WALK_ACCEL_MAX
-                else: self.a_vel[0] -= Game.WALK_ACCEL
+            if self.h_left and self.a_vel[0] >= -game.WALK_ACCEL_MAX:
+                if self.a_vel[0] - game.WALK_ACCEL < -game.WALK_ACCEL_MAX: 
+                    self.a_vel[0] = -game.WALK_ACCEL_MAX
+                else: self.a_vel[0] -= game.WALK_ACCEL
             # Release left deacceleration
-            elif self.a_vel[0] < Game.WALK_DEACCEL_MAX:
-                if self.a_vel[0] + Game.WALK_DEACCEL > Game.WALK_DEACCEL_MAX:
-                    self.a_vel[0] = Game.WALK_DEACCEL_MAX
-                else: self.a_vel[0] += Game.WALK_DEACCEL
+            elif self.a_vel[0] < game.WALK_DEACCEL_MAX:
+                if self.a_vel[0] + game.WALK_DEACCEL > game.WALK_DEACCEL_MAX:
+                    self.a_vel[0] = game.WALK_DEACCEL_MAX
+                else: self.a_vel[0] += game.WALK_DEACCEL
             self.velocity_update()
         else: self.vel = [0, 0]
             
@@ -394,26 +391,26 @@ class Character(Entity):
             if self.hp <= 0: # Death
                 if self.active:
                     self.active = False
-                    self.time = Game.RESPAWN_COOLDOWN
+                    self.time = game.RESPAWN_COOLDOWN
                     if self.face == 'left': self.image = self.DEATH_LEFT
                     elif self.face == 'right': self.image = self.DEATH_RIGHT
                     self.reset_animation()
             else:
-                self.a_vel[1] = -Game.KNOCKBACK_ACCEL
+                self.a_vel[1] = -game.KNOCKBACK_ACCEL
                 if self.pos[0] < thing.pos[0]:
-                    self.a_vel[0] = -Game.KNOCKBACK_ACCEL
+                    self.a_vel[0] = -game.KNOCKBACK_ACCEL
                     self.image = self.DAMAGED_LEFT
                 elif self.pos[0] > thing.pos[0]:
-                    self.a_vel[0] = Game.KNOCKBACK_ACCEL
+                    self.a_vel[0] = game.KNOCKBACK_ACCEL
                     self.image = self.DAMAGED_RIGHT
-                self.time = Game.INVIN_TIME
-                self.i_time = Game.INVIN_TIME
+                self.time = game.INVIN_TIME
+                self.i_time = game.INVIN_TIME
                 self.reset_animation()
 
             
     def respawn(self):
         # Respawns the player at last room entry point
-        if player.time <= Game.DEATH_TIME:
+        if player.time <= game.DEATH_TIME:
             if self.face == 'left': self.image = self.IDLE_LEFT
             elif self.face == 'right': self.image = self.IDLE_RIGHT
             self.active = True
@@ -424,8 +421,8 @@ class Character(Entity):
             self.time = 0
             self.i_time = 0
             self.a_time = 0
-            Game.reset_room()
-            Camera.respawn()
+            game.reset_room()
+            camera.respawn()
         
 class Weapon(Object, Animation):
     LEFT = Spritesheet(simplegui.load_image('https://i.imgur.com/hsPnQre.png'),2,5,2)
@@ -439,7 +436,7 @@ class Weapon(Object, Animation):
 
     def check_collision(self):
         # Checks collision against all entities
-        for ent in Game.room(0,0).ents:
+        for ent in game.room(0,0).ents:
             if self.has_collided(ent):
                 self.collision(ent)
                                 
@@ -477,9 +474,9 @@ class Slime(Entity):
         if self.active: # Enemy A.I.
             if self.time == 0:
                 self.time = 100
-                self.a_vel[1] = Game.SLIME_JUMP_ACCEL
-                if player.pos[0] > self.pos[0]: self.d_vel[0] = Game.SLIME_WALK_VEL
-                elif player.pos[0] < self.pos[0]: self.d_vel[0] = -Game.SLIME_WALK_VEL
+                self.a_vel[1] = game.SLIME_JUMP_ACCEL
+                if player.pos[0] > self.pos[0]: self.d_vel[0] = game.SLIME_WALK_VEL
+                elif player.pos[0] < self.pos[0]: self.d_vel[0] = -game.SLIME_WALK_VEL
             elif self.ground: self.d_vel[0] = 0
             self.velocity_update()
         else: self.vel = [0, 0]
@@ -507,8 +504,8 @@ class Crawler(Entity):
     def __init__(self, picture, position, size, health):
         Entity.__init__(self, picture, position, size, health)
         self.dmg = 1
-        if player.pos[0] > self.pos[0]: self.d_vel[0] = -Game.CRAWLER_WALK_VEL
-        elif player.pos[0] < self.pos[0]: self.d_vel[0] = Game.CRAWLER_WALK_VEL
+        if player.pos[0] > self.pos[0]: self.d_vel[0] = -game.CRAWLER_WALK_VEL
+        elif player.pos[0] < self.pos[0]: self.d_vel[0] = game.CRAWLER_WALK_VEL
     
     def check_velocity(self):
         if self.active: # Enemy A.I.
@@ -538,20 +535,20 @@ class Big_Crawler(Crawler):
 class Camera:
     # Scrolls the screen and controls room changes
     
-    def check_collision(ent, axis):
+    def check_collision(self, ent, axis):
         # Stops player from going off edge of screen
         future_pos = ent.pos[axis] + ent.vel[axis]
-        if future_pos <= -Game.ROOM_BOUND:
-            ent.vel[axis] = -ent.pos[axis] - Game.ROOM_BOUND
-        elif future_pos >= Game.room(0,0).bounds[axis] + Game.ROOM_BOUND:
-            ent.vel[axis] = Game.room(0,0).bounds[axis] - ent.pos[axis] + Game.ROOM_BOUND
+        if future_pos <= -game.ROOM_BOUND:
+            ent.vel[axis] = -ent.pos[axis] - game.ROOM_BOUND
+        elif future_pos >= game.room(0,0).bounds[axis] + game.ROOM_BOUND:
+            ent.vel[axis] = game.room(0,0).bounds[axis] - ent.pos[axis] + game.ROOM_BOUND
     
-    def shift(axis):
+    def shift(self, axis):
         # Moves the screen when player moves
         future_pos = player.pos[axis] + player.vel[axis] # Player position after velocity
         # Camera boundaries
         bound_1 = DIMENSIONS[axis]/2 # Left / Up
-        bound_2 = Game.room(0,0).bounds[axis] - DIMENSIONS[axis]/2 # Right / Down
+        bound_2 = game.room(0,0).bounds[axis] - DIMENSIONS[axis]/2 # Right / Down
         
         # If will go into left / up boundary
         if future_pos < bound_1:
@@ -559,13 +556,13 @@ class Camera:
                 player.s_pos[axis] += future_pos - bound_1
                 if player.pos[axis] > bound_2: # If in other boundary
                     player.s_pos[axis] += bound_2 - player.pos[axis]
-                    for ent in Game.room(0,0).ents:
+                    for ent in game.room(0,0).ents:
                         ent.s_pos[axis] -= bound_1 - bound_2
-                    Game.room(0,0).layout.s_pos[axis] -= bound_1 - bound_2
+                    game.room(0,0).layout.s_pos[axis] -= bound_1 - bound_2
                 else: # If not in other boundary
-                    for ent in Game.room(0,0).ents:
+                    for ent in game.room(0,0).ents:
                         ent.s_pos[axis] -= bound_1 - player.pos[axis]
-                    Game.room(0,0).layout.s_pos[axis] -= bound_1 - player.pos[axis]
+                    game.room(0,0).layout.s_pos[axis] -= bound_1 - player.pos[axis]
             else: player.s_pos[axis] += player.vel[axis] # if already in boundary
                 
         # If will go into right / down boundary
@@ -574,228 +571,231 @@ class Camera:
                 player.s_pos[axis] += future_pos - bound_2
                 if player.pos[axis] < bound_1: # If in other boundary
                     player.s_pos[axis] += bound_1 - player.pos[axis]
-                    for ent in Game.room(0,0).ents:
+                    for ent in game.room(0,0).ents:
                         ent.s_pos[axis] -= bound_2 - bound_1
-                    Game.room(0,0).layout.s_pos[axis] -= bound_2 - bound_1
+                    game.room(0,0).layout.s_pos[axis] -= bound_2 - bound_1
                 else: # If not in other boundary
-                    for ent in Game.room(0,0).ents:
+                    for ent in game.room(0,0).ents:
                         ent.s_pos[axis] -= bound_2 - player.pos[axis]
-                    Game.room(0,0).layout.s_pos[axis] -= bound_2 - player.pos[axis]
+                    game.room(0,0).layout.s_pos[axis] -= bound_2 - player.pos[axis]
             else: player.s_pos[axis] += player.vel[axis] # if already in boundary
                 
         # If will go out of either boundary
         elif future_pos >= bound_1 and future_pos <= bound_2:
             if player.pos[axis] <= bound_1: # If going out left / up boundary
                 player.s_pos[axis] += bound_1 - player.pos[axis]
-                for ent in Game.room(0,0).ents:
+                for ent in game.room(0,0).ents:
                     ent.s_pos[axis] -= future_pos - bound_1
-                Game.room(0,0).layout.s_pos[axis] -= future_pos - bound_1
+                game.room(0,0).layout.s_pos[axis] -= future_pos - bound_1
             elif player.pos[axis] >= bound_2: # If going out right / down boundary
                 player.s_pos[axis] += bound_2 - player.pos[axis]
-                for ent in Game.room(0,0).ents:
+                for ent in game.room(0,0).ents:
                     ent.s_pos[axis] -= future_pos - bound_2
-                Game.room(0,0).layout.s_pos[axis] -= future_pos - bound_2
+                game.room(0,0).layout.s_pos[axis] -= future_pos - bound_2
             else: # If already out of boundary
-                for ent in Game.room(0,0).ents:
+                for ent in game.room(0,0).ents:
                     ent.s_pos[axis] -= player.vel[axis]
-                Game.room(0,0).layout.s_pos[axis] -= player.vel[axis]
+                game.room(0,0).layout.s_pos[axis] -= player.vel[axis]
         
-    def room_check():
+    def room_check(self):
         # Checks if player is at edge of room
         
         # Left
-        if player.pos[0] == -Game.ROOM_BOUND:
-            cam_dist = (Game.room(-1,0).spawn[0][1][1] - Game.room(0,0).spawn[0][0][1]
+        if player.pos[0] == -game.ROOM_BOUND:
+            cam_dist = (game.room(-1,0).spawn[0][1][1] - game.room(0,0).spawn[0][0][1]
                       + player.pos[1] - player.s_pos[1])
-            Game.room(-1,0).layout.s_pos[0] -= DIMENSIONS[0]
-            Game.room(-1,0).layout.s_pos[0] -= Game.room(-1,0).spawn[0][1][0] - DIMENSIONS[0]
-            Game.room(-1,0).layout.s_pos[1] -= cam_dist
-            for ent in Game.room(-1,0).ents:
+            game.room(-1,0).layout.s_pos[0] -= DIMENSIONS[0]
+            game.room(-1,0).layout.s_pos[0] -= game.room(-1,0).spawn[0][1][0] - DIMENSIONS[0]
+            game.room(-1,0).layout.s_pos[1] -= cam_dist
+            for ent in game.room(-1,0).ents:
                 ent.s_pos[0] -= DIMENSIONS[0]
-                ent.s_pos[0] -= Game.room(-1,0).spawn[0][1][0] - DIMENSIONS[0]
+                ent.s_pos[0] -= game.room(-1,0).spawn[0][1][0] - DIMENSIONS[0]
                 ent.s_pos[1] -= cam_dist
                 
         # Right
-        elif player.pos[0] == Game.room(0,0).bounds[0] + Game.ROOM_BOUND:
-            cam_dist = (Game.room(1,0).spawn[0][0][1] - Game.room(0,0).spawn[0][1][1]
+        elif player.pos[0] == game.room(0,0).bounds[0] + game.ROOM_BOUND:
+            # Test if reached end
+            game.room(1, 0)
+
+            cam_dist = (game.room(1,0).spawn[0][0][1] - game.room(0,0).spawn[0][1][1]
                       + player.pos[1] - player.s_pos[1])
-            Game.room(1,0).layout.s_pos[0] += DIMENSIONS[0]
-            Game.room(1,0).layout.s_pos[1] -= cam_dist
-            for ent in Game.room(1,0).ents:
+            game.room(1,0).layout.s_pos[0] += DIMENSIONS[0]
+            game.room(1,0).layout.s_pos[1] -= cam_dist
+            for ent in game.room(1,0).ents:
                 ent.s_pos[0] += DIMENSIONS[0]
                 ent.s_pos[1] -= cam_dist
                
         # Up
-        if player.pos[1] == -Game.ROOM_BOUND:
-            cam_dist = (Game.room(0,1).spawn[1][1][0] - Game.room(0,0).spawn[1][0][0]
+        if player.pos[1] == -game.ROOM_BOUND:
+            cam_dist = (game.room(0,1).spawn[1][1][0] - game.room(0,0).spawn[1][0][0]
                       + player.pos[0] - player.s_pos[0])
-            Game.room(0,1).layout.s_pos[1] -= DIMENSIONS[1]
-            Game.room(0,1).layout.s_pos[1] -= Game.room(0,1).spawn[1][1][1] - DIMENSIONS[1]
-            Game.room(0,1).layout.s_pos[0] -= cam_dist
-            for ent in Game.room(0,1).ents:
+            game.room(0,1).layout.s_pos[1] -= DIMENSIONS[1]
+            game.room(0,1).layout.s_pos[1] -= game.room(0,1).spawn[1][1][1] - DIMENSIONS[1]
+            game.room(0,1).layout.s_pos[0] -= cam_dist
+            for ent in game.room(0,1).ents:
                 ent.s_pos[1] -= DIMENSIONS[1]
-                ent.s_pos[1] -= Game.room(0,1).spawn[1][1][1] - DIMENSIONS[1]
+                ent.s_pos[1] -= game.room(0,1).spawn[1][1][1] - DIMENSIONS[1]
                 ent.s_pos[0] -= cam_dist
                                 
         # Down
-        elif player.pos[1] == Game.room(0,0).bounds[1] + Game.ROOM_BOUND:
-            cam_dist = (Game.room(0,-1).spawn[1][0][0] - Game.room(0,0).spawn[1][1][0]
+        elif player.pos[1] == game.room(0,0).bounds[1] + game.ROOM_BOUND:
+            cam_dist = (game.room(0,-1).spawn[1][0][0] - game.room(0,0).spawn[1][1][0]
                       + player.pos[0] - player.s_pos[0])
-            Game.room(0,-1).layout.s_pos[1] += DIMENSIONS[1]
-            Game.room(0,-1).layout.s_pos[0] -= cam_dist
-            for ent in Game.room(0,-1).ents:
+            game.room(0,-1).layout.s_pos[1] += DIMENSIONS[1]
+            game.room(0,-1).layout.s_pos[0] -= cam_dist
+            for ent in game.room(0,-1).ents:
                 ent.s_pos[1] += DIMENSIONS[1]
                 ent.s_pos[0] -= cam_dist
                 
-    def room_trans(canvas):
+    def room_trans(self, canvas):
         # Transition from one room to another
         
         # Left
-        if player.pos[0] == -Game.ROOM_BOUND:
-            Game.room(-1, 0).layout.draw(canvas)
-            for ent in Game.room(-1,0).ents:
+        if player.pos[0] == -game.ROOM_BOUND:
+            game.room(-1, 0).layout.draw(canvas)
+            for ent in game.room(-1,0).ents:
                 ent.draw(canvas)
                 
             # Shift screen
-            if round(player.s_pos[0], 0) < DIMENSIONS[0] - Game.ROOM_BOUND:
-                Game.room(0, 0).layout.s_pos[0] += Game.ROOM_VEL
-                Game.room(-1, 0).layout.s_pos[0] += Game.ROOM_VEL
-                for ent in Game.room(0,0).ents:
-                    ent.s_pos[0] += Game.ROOM_VEL
-                for ent in Game.room(-1,0).ents:
-                    ent.s_pos[0] += Game.ROOM_VEL
-                player.s_pos[0] += Game.ROOM_VEL
+            if round(player.s_pos[0], 0) < DIMENSIONS[0] - game.ROOM_BOUND:
+                game.room(0, 0).layout.s_pos[0] += game.ROOM_VEL
+                game.room(-1, 0).layout.s_pos[0] += game.ROOM_VEL
+                for ent in game.room(0,0).ents:
+                    ent.s_pos[0] += game.ROOM_VEL
+                for ent in game.room(-1,0).ents:
+                    ent.s_pos[0] += game.ROOM_VEL
+                player.s_pos[0] += game.ROOM_VEL
                     
             else: # Change room
-                player.pos[0] = Game.room(-1,0).spawn[0][1][0] - Game.ROOM_BOUND
-                player.pos[1] = Game.room(-1,0).spawn[0][1][1] - \
-                                  Game.room(0,0).spawn[0][0][1] + player.pos[1]
-                player.origin[0] = Game.room(-1,0).spawn[0][1][0] - Game.ROOM_SPAWN_BOUND[0]
-                player.origin[1] = Game.room(-1,0).spawn[0][1][1]
+                player.pos[0] = game.room(-1,0).spawn[0][1][0] - game.ROOM_BOUND
+                player.pos[1] = game.room(-1,0).spawn[0][1][1] - \
+                                  game.room(0,0).spawn[0][0][1] + player.pos[1]
+                player.origin[0] = game.room(-1,0).spawn[0][1][0] - game.ROOM_SPAWN_BOUND[0]
+                player.origin[1] = game.room(-1,0).spawn[0][1][1]
                 player.spawn = 'right'
-                Game.reset_room()
-                Game.x_pos -= 1
+                game.reset_room()
+                game.x_pos -= 1
         
         # Right
-        elif player.pos[0] == Game.room(0,0).bounds[0] + Game.ROOM_BOUND:
-            Game.room(1, 0).layout.draw(canvas)
-            for ent in Game.room(1,0).ents:
+        elif player.pos[0] == game.room(0,0).bounds[0] + game.ROOM_BOUND:
+            game.room(1, 0).layout.draw(canvas)
+            for ent in game.room(1,0).ents:
                 ent.draw(canvas)
                 
             # Shift screen
-            if round(player.s_pos[0], 0) > Game.ROOM_BOUND:
-                Game.room(0, 0).layout.s_pos[0] -= Game.ROOM_VEL
-                Game.room(1, 0).layout.s_pos[0] -= Game.ROOM_VEL
-                for ent in Game.room(0,0).ents:
-                    ent.s_pos[0] -= Game.ROOM_VEL
-                for ent in Game.room(1,0).ents:
-                    ent.s_pos[0] -= Game.ROOM_VEL
-                player.s_pos[0] -= Game.ROOM_VEL
+            if round(player.s_pos[0], 0) > game.ROOM_BOUND:
+                game.room(0, 0).layout.s_pos[0] -= game.ROOM_VEL
+                game.room(1, 0).layout.s_pos[0] -= game.ROOM_VEL
+                for ent in game.room(0,0).ents:
+                    ent.s_pos[0] -= game.ROOM_VEL
+                for ent in game.room(1,0).ents:
+                    ent.s_pos[0] -= game.ROOM_VEL
+                player.s_pos[0] -= game.ROOM_VEL
                     
             else: # Change room
-                player.pos[0] = Game.room(1,0).spawn[0][0][0] + Game.ROOM_BOUND
-                player.pos[1] = Game.room(1,0).spawn[0][0][1] - \
-                                  Game.room(0,0).spawn[0][1][1] + player.pos[1]
-                player.origin[0] = Game.room(1,0).spawn[0][0][0] + Game.ROOM_SPAWN_BOUND[0]
-                player.origin[1] = Game.room(1,0).spawn[0][0][1]
+                player.pos[0] = game.room(1,0).spawn[0][0][0] + game.ROOM_BOUND
+                player.pos[1] = game.room(1,0).spawn[0][0][1] - \
+                                  game.room(0,0).spawn[0][1][1] + player.pos[1]
+                player.origin[0] = game.room(1,0).spawn[0][0][0] + game.ROOM_SPAWN_BOUND[0]
+                player.origin[1] = game.room(1,0).spawn[0][0][1]
                 player.spawn = 'left'
-                Game.reset_room()
-                Game.x_pos += 1
+                game.reset_room()
+                game.x_pos += 1
                 
         # Up
-        elif player.pos[1] == -Game.ROOM_BOUND:
-            Game.room(0, 1).layout.draw(canvas)
-            for ent in Game.room(0,1).ents:
+        elif player.pos[1] == -game.ROOM_BOUND:
+            game.room(0, 1).layout.draw(canvas)
+            for ent in game.room(0,1).ents:
                 ent.draw(canvas)
                 
             # Shift screen
-            if round(player.s_pos[1], 0) < DIMENSIONS[1] - Game.ROOM_BOUND:
-                Game.room(0, 0).layout.s_pos[1] += Game.ROOM_VEL
-                Game.room(0, 1).layout.s_pos[1] += Game.ROOM_VEL
-                for ent in Game.room(0,0).ents:
-                    ent.s_pos[1] += Game.ROOM_VEL
-                for ent in Game.room(0,1).ents:
-                    ent.s_pos[1] += Game.ROOM_VEL
-                player.s_pos[1] += Game.ROOM_VEL
+            if round(player.s_pos[1], 0) < DIMENSIONS[1] - game.ROOM_BOUND:
+                game.room(0, 0).layout.s_pos[1] += game.ROOM_VEL
+                game.room(0, 1).layout.s_pos[1] += game.ROOM_VEL
+                for ent in game.room(0,0).ents:
+                    ent.s_pos[1] += game.ROOM_VEL
+                for ent in game.room(0,1).ents:
+                    ent.s_pos[1] += game.ROOM_VEL
+                player.s_pos[1] += game.ROOM_VEL
                     
             else: # Change room
-                player.pos[1] = Game.room(0,1).spawn[1][1][1] - Game.ROOM_BOUND
-                player.pos[0] = Game.room(0,1).spawn[1][1][0] - \
-                                  Game.room(0,0).spawn[1][0][0] + player.pos[0]
-                player.origin[1] = Game.room(0,1).spawn[1][1][1] - Game.ROOM_SPAWN_BOUND[1]
-                player.origin[0] = Game.room(0,1).spawn[1][1][0]
+                player.pos[1] = game.room(0,1).spawn[1][1][1] - game.ROOM_BOUND
+                player.pos[0] = game.room(0,1).spawn[1][1][0] - \
+                                  game.room(0,0).spawn[1][0][0] + player.pos[0]
+                player.origin[1] = game.room(0,1).spawn[1][1][1] - game.ROOM_SPAWN_BOUND[1]
+                player.origin[0] = game.room(0,1).spawn[1][1][0]
                 player.spawn = 'down'
-                Game.reset_room()
-                Game.y_pos += 1
+                game.reset_room()
+                game.y_pos += 1
                 
         # Down
-        elif player.pos[1] == Game.room(0,0).bounds[1] + Game.ROOM_BOUND:
-            Game.room(0,-1).layout.draw(canvas)
-            for ent in Game.room(0,-1).ents:
+        elif player.pos[1] == game.room(0,0).bounds[1] + game.ROOM_BOUND:
+            game.room(0,-1).layout.draw(canvas)
+            for ent in game.room(0,-1).ents:
                 ent.draw(canvas)
                 
             # Shift screen
-            if round(player.s_pos[1], 0) > Game.ROOM_BOUND:
-                Game.room(0, 0).layout.s_pos[1] -= Game.ROOM_VEL
-                Game.room(0, -1).layout.s_pos[1] -= Game.ROOM_VEL
-                for ent in Game.room(0,0).ents:
-                    ent.s_pos[1] -= Game.ROOM_VEL
-                for ent in Game.room(0,-1).ents:
-                    ent.s_pos[1] -= Game.ROOM_VEL
-                player.s_pos[1] -= Game.ROOM_VEL
+            if round(player.s_pos[1], 0) > game.ROOM_BOUND:
+                game.room(0, 0).layout.s_pos[1] -= game.ROOM_VEL
+                game.room(0, -1).layout.s_pos[1] -= game.ROOM_VEL
+                for ent in game.room(0,0).ents:
+                    ent.s_pos[1] -= game.ROOM_VEL
+                for ent in game.room(0,-1).ents:
+                    ent.s_pos[1] -= game.ROOM_VEL
+                player.s_pos[1] -= game.ROOM_VEL
                     
             else: # Change room
-                player.pos[1] = Game.room(0,-1).spawn[1][0][1] + Game.ROOM_BOUND
-                player.pos[0] = Game.room(0,-1).spawn[1][0][0] - \
-                                  Game.room(0,0).spawn[1][1][0] + player.pos[0]
-                player.origin[1] = Game.room(0,-1).spawn[1][0][1] + Game.ROOM_SPAWN_BOUND[1]
-                player.origin[0] = Game.room(0,-1).spawn[1][0][0]
+                player.pos[1] = game.room(0,-1).spawn[1][0][1] + game.ROOM_BOUND
+                player.pos[0] = game.room(0,-1).spawn[1][0][0] - \
+                                  game.room(0,0).spawn[1][1][0] + player.pos[0]
+                player.origin[1] = game.room(0,-1).spawn[1][0][1] + game.ROOM_SPAWN_BOUND[1]
+                player.origin[0] = game.room(0,-1).spawn[1][0][0]
                 player.spawn = 'up'
-                Game.reset_room()
-                Game.y_pos -= 1
+                game.reset_room()
+                game.y_pos -= 1
                 
         else: return True
         
-    def respawn():
+    def respawn(self):
         if player.spawn == 'left':
-            cam_dist = [Game.room(0,0).bounds[0] - DIMENSIONS[0],
-                        Game.room(0,0).bounds[1] - DIMENSIONS[1]]
-            Game.room(0,0).layout.s_pos[1] -= cam_dist[1]
-            for ent in Game.room(0,0).ents:
+            cam_dist = [game.room(0,0).bounds[0] - DIMENSIONS[0],
+                        game.room(0,0).bounds[1] - DIMENSIONS[1]]
+            game.room(0,0).layout.s_pos[1] -= cam_dist[1]
+            for ent in game.room(0,0).ents:
                 ent.s_pos[1] -= cam_dist[1]
-            player.s_pos[0] = Game.room(0,0).spawn[0][0][0] + Game.ROOM_SPAWN_BOUND[0]
-            player.s_pos[1] = Game.room(0,0).spawn[0][0][1] - cam_dist[1]
+            player.s_pos[0] = game.room(0,0).spawn[0][0][0] + game.ROOM_SPAWN_BOUND[0]
+            player.s_pos[1] = game.room(0,0).spawn[0][0][1] - cam_dist[1]
             
         if player.spawn == 'right':
-            cam_dist = [Game.room(0,0).bounds[0] - DIMENSIONS[0],
-                        Game.room(0,0).bounds[1] - DIMENSIONS[1]]
-            Game.room(0,0).layout.s_pos[0] -= cam_dist[0]
-            Game.room(0,0).layout.s_pos[1] -= cam_dist[1]
-            for ent in Game.room(0,0).ents:
+            cam_dist = [game.room(0,0).bounds[0] - DIMENSIONS[0],
+                        game.room(0,0).bounds[1] - DIMENSIONS[1]]
+            game.room(0,0).layout.s_pos[0] -= cam_dist[0]
+            game.room(0,0).layout.s_pos[1] -= cam_dist[1]
+            for ent in game.room(0,0).ents:
                 ent.s_pos[0] -= cam_dist[0]
                 ent.s_pos[1] -= cam_dist[1]
-            player.s_pos[0] = Game.room(0,0).spawn[0][1][0] - Game.ROOM_SPAWN_BOUND[0] - cam_dist[0]
-            player.s_pos[1] = Game.room(0,0).spawn[0][1][1] - cam_dist[1]
+            player.s_pos[0] = game.room(0,0).spawn[0][1][0] - game.ROOM_SPAWN_BOUND[0] - cam_dist[0]
+            player.s_pos[1] = game.room(0,0).spawn[0][1][1] - cam_dist[1]
                 
         if player.spawn == 'up':
-            cam_dist = [Game.room(0,0).bounds[0] - DIMENSIONS[0],
-                        Game.room(0,0).bounds[1] - DIMENSIONS[1]]
-            Game.room(0,0).layout.s_pos[0] -= cam_dist[0]
-            for ent in Game.room(0,0).ents:
+            cam_dist = [game.room(0,0).bounds[0] - DIMENSIONS[0],
+                        game.room(0,0).bounds[1] - DIMENSIONS[1]]
+            game.room(0,0).layout.s_pos[0] -= cam_dist[0]
+            for ent in game.room(0,0).ents:
                 ent.s_pos[0] -= cam_dist[0]
-            player.s_pos[1] = Game.room(0,0).spawn[1][0][1] + Game.ROOM_SPAWN_BOUND[1]
-            player.s_pos[0] = Game.room(0,0).spawn[1][0][0] - cam_dist[0]
+            player.s_pos[1] = game.room(0,0).spawn[1][0][1] + game.ROOM_SPAWN_BOUND[1]
+            player.s_pos[0] = game.room(0,0).spawn[1][0][0] - cam_dist[0]
                 
         if player.spawn == 'down':
-            cam_dist = [Game.room(0,0).bounds[0] - DIMENSIONS[0],
-                        Game.room(0,0).bounds[1] - DIMENSIONS[1]]
-            Game.room(0,0).layout.s_pos[0] -= cam_dist[0]
-            Game.room(0,0).layout.s_pos[1] -= cam_dist[1]
-            for ent in Game.room(0,0).ents:
+            cam_dist = [game.room(0,0).bounds[0] - DIMENSIONS[0],
+                        game.room(0,0).bounds[1] - DIMENSIONS[1]]
+            game.room(0,0).layout.s_pos[0] -= cam_dist[0]
+            game.room(0,0).layout.s_pos[1] -= cam_dist[1]
+            for ent in game.room(0,0).ents:
                 ent.s_pos[1] -= cam_dist[1]
                 ent.s_pos[0] -= cam_dist[0]
-            player.s_pos[1] = Game.room(0,0).spawn[1][1][1] - Game.ROOM_SPAWN_BOUND[1] - cam_dist[1]
-            player.s_pos[0] = Game.room(0,0).spawn[1][1][0] - cam_dist[0]
+            player.s_pos[1] = game.room(0,0).spawn[1][1][1] - game.ROOM_SPAWN_BOUND[1] - cam_dist[1]
+            player.s_pos[0] = game.room(0,0).spawn[1][1][0] - cam_dist[0]
 
 class Room:
     
@@ -1014,13 +1014,16 @@ class Game:
     ROOM_BOUND = 10
     ROOM_SPAWN_BOUND = [60, 40]
     ROOM_VEL = 20
-        
-    def start_game():
+    
+    # Check if player has won
+    over = False
+            
+    def start_game(self):
         global player, background
         player = Character(Weapon(Weapon.RIGHT,[0,0],[42,34],1),
                            Character.IDLE_RIGHT, [60, 405], [20,35], 3)
         background = Image(Image.BACKGROUND, [DIMENSIONS[0]/2,DIMENSIONS[1]/2],[304,240])
-        for rooms in Game.rooms:
+        for rooms in game.rooms:
             for room in rooms:
                 for counter, string in enumerate(room.data):
                     if string != ' ':
@@ -1040,41 +1043,57 @@ class Game:
                             room.ents.append(thing_dict[string])
         player.respawn()
         
-    def room(x_change, y_change):
-        return Game.rooms[Game.x_pos + x_change][Game.y_pos + y_change]
+    def end_game(self):
+        game.over = True
+        global end_time
+        end_time = time()
+        
+    def room(self, x_change, y_change):
+        return game.rooms[game.x_pos + x_change][game.y_pos + y_change]
 
-    def reset_room():
+    def reset_room(self):
         # Resets room to original layout
         player.hp = player.max_hp
-        for ent in Game.room(0,0).ents:
+        for ent in game.room(0,0).ents:
             ent.__init__(ent.image, ent.origin, ent.size, ent.max_hp)
-        Game.room(0,0).layout.s_pos = [Game.room(0,0).layout.origin[0],
-                                       Game.room(0,0).layout.origin[1]]
+        game.room(0,0).layout.s_pos = [game.room(0,0).layout.origin[0],
+                                       game.room(0,0).layout.origin[1]]
 # Handler to draw on canvas
 def draw(canvas):
+    if game.over:
+        canvas.draw_text("{:.2f}".format(end_time - start_time), (300, 300), 100, 'Black')
+        return
+    
     if not player.active: player.respawn()
     background.draw(canvas)
-    Game.room(0,0).layout.draw(canvas)
-    for ent in Game.room(0,0).ents:
+    game.room(0,0).layout.draw(canvas)
+    for ent in game.room(0,0).ents:
         if ent.on_screen(): ent.draw(canvas)
     player.draw(canvas)
-    if not Camera.room_trans(canvas): return
+    if not camera.room_trans(canvas): return
     player.check_velocity()
-    for ent in Game.room(0,0).ents:
+    for ent in game.room(0,0).ents:
         if ent.on_screen(): ent.check_velocity()
-    for obs in Game.room(0,0).obs:
+    for obs in game.room(0,0).obs:
         if obs.on_screen(): obs.check_collision()
-    for ent in Game.room(0,0).ents:
+    for ent in game.room(0,0).ents:
         if ent.on_screen(): ent.check_collision()
     player.check_collision()
-    for axis in range(2): Camera.check_collision(player, axis)
-    for axis in range(2): Camera.shift(axis)
-    for ent in Game.room(0,0).ents:
+    for axis in range(2): camera.check_collision(player, axis)
+    for axis in range(2): camera.shift(axis)
+    for ent in game.room(0,0).ents:
         if ent.on_screen(): ent.update()
     player.update()
-    Camera.room_check()
+    try: camera.room_check()
+    except: game.end_game()
 
-Game.start_game()
+# Quick and dirty fix to prior use of calling class methods like they were static
+# This allows the game to run on python 3
+game = Game()
+camera = Camera()
+start_time = time()
+end_time = None
+game.start_game()
 
 frame=simplegui.create_frame('GAME', DIMENSIONS[0], DIMENSIONS[1])
 
